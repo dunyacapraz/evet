@@ -58,91 +58,89 @@
       setTimeout(() => { toast.remove(); }, 2500);
     }
 
-    function loadPendingNews() {
-        db.ref('news').on('value', (snapshot) => {
-            const listDiv = document.getElementById('adminNewsList');
-            if (!snapshot.exists()) {
-                listDiv.innerHTML = '<i>Bildirim yok.</i>';
-                return;
+    async function loadPendingNews() {
+        db.ref('news').off(); // Önceki dinleyiciyi kaldır
+        const listDiv = document.getElementById('adminNewsList');
+        listDiv.innerHTML = 'Yükleniyor...';
+        const snapshot = await db.ref('news').once('value');
+        if (!snapshot.exists()) {
+            listDiv.innerHTML = '<i>Bildirim yok.</i>';
+            return;
+        }
+        let pendingItems = [];
+        snapshot.forEach(child => {
+            const d = child.val();
+            const newsId = child.key;
+            if (!d.approved) {
+                pendingItems.push({
+                    type: 'news',
+                    id: newsId,
+                    data: d,
+                    timestamp: d.timestamp || 0
+                });
             }
-
-            let pendingItems = [];
-            snapshot.forEach(child => {
-                const d = child.val();
-                const newsId = child.key;
-
-                // Onay bekleyen haberler
-                if (!d.approved) {
+            if (d.pendingImages) {
+                Object.entries(d.pendingImages).forEach(([imgKey, img]) => {
                     pendingItems.push({
-                        type: 'news',
-                        id: newsId,
+                        type: 'image',
+                        newsId: newsId,
+                        imgKey: imgKey,
                         data: d,
-                        timestamp: d.timestamp || 0
+                        imageData: img,
+                        timestamp: img.timestamp || 0
                     });
-                }
-
-                // Onay bekleyen görseller
-                if (d.pendingImages) {
-                    Object.entries(d.pendingImages).forEach(([imgKey, img]) => {
-                        pendingItems.push({
-                            type: 'image',
-                            newsId: newsId,
-                            imgKey: imgKey,
-                            data: d,
-                            imageData: img,
-                            timestamp: img.timestamp || 0
-                        });
-                    });
-                }
-            });
-
-            // Zaman damgasına göre sırala (en yeniden en eskiye)
-            pendingItems.sort((a, b) => b.timestamp - a.timestamp);
-
-            if (pendingItems.length === 0) {
-                listDiv.innerHTML = '<i>Bildirim yok.</i>';
-                return;
+                });
             }
-
-            let html = '';
-            pendingItems.forEach(item => {
-                if (item.type === 'news') {
-                    html += `
-                    <div class="admin-news-card" style="position:relative;">
-                        <div class="pending-notification">Yeni Haber</div>
-                        <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
-                        <div class="admin-news-info">
-                            <div class="admin-news-title">${item.data.title}</div>
-                            <div class="admin-news-desc">${item.data.description}</div>
-                            <div class="admin-news-author">Ekleyen: ${item.data.authorName}</div>
-                            <button class="admin-btn" onclick="showDetailModal('${item.id}')">Detay</button>
-                            <button class="admin-btn approve" onclick="approveNews('${item.id}')">Onayla</button>
-                            <button class="admin-btn delete" onclick="deleteNews('${item.id}')">Sil</button>
-                        </div>
-                    </div>
-                    `;
-                } else if (item.type === 'image') {
-                    html += `
-                    <div class="admin-news-card" style="position:relative;">
-                        <div class="pending-notification">Yeni Görsel</div>
-                        <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
-                        <div class="admin-news-info">
-                            <div class="admin-news-title">${item.data.title}</div>
-                            <div class="admin-news-desc">${item.data.description}</div>
-                            <div class="pending-image-info">
-                                <img src="${item.imageData.url}" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin:8px 0;">
-                                <div style="font-size:0.9em;color:#666;">Ekleyen: ${item.imageData.uploader || 'İsimsiz'}</div>
-                            </div>
-                            <button class="admin-btn" onclick="showDetailModal('${item.newsId}')">Detay</button>
-                            <button class="admin-btn approve" onclick="approvePendingImage('${item.newsId}','${item.imgKey}','${item.imageData.url}')">Onayla</button>
-                            <button class="admin-btn delete" onclick="deletePendingImage('${item.newsId}','${item.imgKey}')">Sil</button>
-                        </div>
-                    </div>
-                    `;
-                }
-            });
-            listDiv.innerHTML = html;
         });
+        pendingItems.sort((a, b) => b.timestamp - a.timestamp);
+        if (pendingItems.length === 0) {
+            listDiv.innerHTML = '<i>Bildirim yok.</i>';
+            return;
+        }
+        let html = '';
+        for (const item of pendingItems) {
+            let commentCount = 0;
+            let newsKey = item.type === 'news' ? item.id : item.newsId;
+            const commentsSnap = await db.ref('news/' + newsKey + '/comments').once('value');
+            commentCount = commentsSnap.exists() ? commentsSnap.numChildren() : 0;
+            if (item.type === 'news') {
+                html += `
+                <div class="admin-news-card" style="position:relative;">
+                    <div class="pending-notification">Yeni Haber</div>
+                    <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
+                    <div class="admin-news-info">
+                        <div class="admin-news-title">${item.data.title}</div>
+                        <div class="admin-news-desc">${item.data.description}</div>
+                        <div class="admin-news-author">Ekleyen: ${item.data.authorName}</div>
+                        <button class="admin-btn" onclick="showDetailModal('${item.id}')">Detay</button>
+                        <button class="admin-btn approve" onclick="approveNews('${item.id}')">Onayla</button>
+                        <button class="admin-btn delete" onclick="deleteNews('${item.id}')">Sil</button>
+                        <div class="comment-count-footer">💬 ${commentCount} yorum</div>
+                    </div>
+                </div>
+                `;
+            } else if (item.type === 'image') {
+                html += `
+                <div class="admin-news-card" style="position:relative;">
+                    <div class="pending-notification">Yeni Görsel</div>
+                    <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
+                    <div class="admin-news-info">
+                        <div class="admin-news-title">${item.data.title}</div>
+                        <div class="admin-news-desc">${item.data.description}</div>
+                        <div class="pending-image-info">
+                            <img src="${item.imageData.url}" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin:8px 0;">
+                            <div style="font-size:0.9em;color:#666;">Ekleyen: ${item.imageData.uploader || 'İsimsiz'}</div>
+                        </div>
+                        <button class="admin-btn" onclick="showDetailModal('${item.newsId}')">Detay</button>
+                        <button class="admin-btn approve" onclick="approvePendingImage('${item.newsId}','${item.imgKey}','${item.imageData.url}')">Onayla</button>
+                        <button class="admin-btn delete" onclick="deletePendingImage('${item.newsId}','${item.imgKey}')">Sil</button>
+                        <div class="comment-count-footer">💬 ${commentCount} yorum</div>
+                    </div>
+                </div>
+                `;
+            }
+        }
+        listDiv.innerHTML = html;
     }
     function loadAllNews() {
         db.ref('news').orderByChild('timestamp').on('value', (snapshot) => {
