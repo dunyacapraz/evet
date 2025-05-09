@@ -88,46 +88,44 @@ async function getUserIP() {
   }
 }
 
-// IP tabanlı oy ver / geri çek / geçiş yap (transaction ile)
+// IP tabanlı oy ver / geri çek / geçiş yap (transaction ile, kök seviyede)
 async function vote(newsId, value) {
   const ip = await getUserIP();
   const ipKey = ip.replace(/\./g, '_');
-  const ipRef = db.ref('news/' + newsId + '/votesByIP/' + ipKey);
-  const voteCountRef = db.ref('news/' + newsId + '/votes');
-  const snapshot = await ipRef.once('value');
-  const currentVote = snapshot.val(); // 'up', 'down' veya null
+  const newsRef = db.ref('news/' + newsId);
   // Optimistic UI: butonları hemen güncelle
-  updateVoteButtons(newsId, value === 1 ? (currentVote === 'up' ? null : 'up') : (currentVote === 'down' ? null : 'down'));
-  // Transaction ile oy sayısını güncelle
-  await voteCountRef.transaction(v => {
-    if (v === null || v === undefined) v = 0;
+  updateVoteButtons(newsId, value === 1 ? 'up' : 'down');
+  await newsRef.transaction(news => {
+    if (!news) return news;
+    if (!news.votesByIP) news.votesByIP = {};
+    if (typeof news.votes !== 'number') news.votes = 0;
+    const currentVote = news.votesByIP[ipKey] || null;
     if (value === 1) {
       if (currentVote === 'up') {
         // Oyunu geri çek
-        ipRef.remove();
-        return v - 1;
+        news.votesByIP[ipKey] = null;
+        news.votes -= 1;
       } else if (currentVote === 'down') {
-        ipRef.set('up');
-        return v + 2;
+        news.votesByIP[ipKey] = 'up';
+        news.votes += 2;
       } else {
-        ipRef.set('up');
-        return v + 1;
+        news.votesByIP[ipKey] = 'up';
+        news.votes += 1;
       }
     } else if (value === -1) {
       if (currentVote === 'down') {
-        ipRef.remove();
-        return v + 1;
+        news.votesByIP[ipKey] = null;
+        news.votes += 1;
       } else if (currentVote === 'up') {
-        ipRef.set('down');
-        return v - 2;
+        news.votesByIP[ipKey] = 'down';
+        news.votes -= 2;
       } else {
-        ipRef.set('down');
-        return v - 1;
+        news.votesByIP[ipKey] = 'down';
+        news.votes -= 1;
       }
     }
-    return v;
+    return news;
   });
-  // Butonları tekrar güncelle (veritabanı ile senkronize)
   setTimeout(() => updateVoteButtons(newsId), 100);
 }
 
