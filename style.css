@@ -44,6 +44,7 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     padding: 20px 18px 16px 18px;
+    padding-bottom: 38px;
 }
 .news-info {
     display: flex;
@@ -66,6 +67,7 @@ body {
     font-size: 0.9em;
     color: #718096;
     margin-top: 8px;
+    margin-bottom: 18px;
 }
 .vote-section {
     display: flex;
