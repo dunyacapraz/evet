@@ -376,10 +376,17 @@ body {
     border: 1px solid #e2e8f0;
 }
 .comment-count-footer {
+    position: absolute;
+    left: 18px;
+    bottom: 14px;
     font-size: 0.93em;
     color: #b0b0b0;
-    margin-top: 18px;
-    text-align: right;
     font-style: italic;
     letter-spacing: 0.01em;
+    opacity: 0.93;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    pointer-events: none;
+    user-select: none;
 } 

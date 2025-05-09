@@ -22,6 +22,7 @@ async function renderNews(newsArr) {
     for (const item of newsArr) {
         const newsCard = document.createElement('div');
         newsCard.className = 'news-card';
+        newsCard.style.position = 'relative';
         const votedKey = `voted_${item.id}`;
         const upvotes = item.upvotes || 0;
         const downvotes = item.downvotes || 0;
@@ -36,7 +37,6 @@ async function renderNews(newsArr) {
                     <div class="news-title">${item.title}</div>
                     <div class="news-desc">${item.description}</div>
                     <div class="news-author">Ekleyen: ${item.authorName}</div>
-                    <div class="comment-count-footer">💬 ${commentCount} yorum</div>
                 </div>
                 <div class="vote-section">
                     <button class="vote-btn up" id="up-btn-${item.id}" onclick="event.stopPropagation(); vote('${item.id}', 1)">
@@ -48,6 +48,10 @@ async function renderNews(newsArr) {
                     </button>
                     <span class="vote-count" id="downvote-count-${item.id}" style="color:#e53e3e;font-weight:bold;">-${downvotes}</span>
                 </div>
+            </div>
+            <div class="comment-count-footer">
+              <svg style="width:18px;height:18px;vertical-align:middle;opacity:0.7;margin-right:3px;" fill="none" stroke="#b0b0b0" stroke-width="1.7" viewBox="0 0 20 20"><path d="M3 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/><circle cx="10" cy="8" r="4"/></svg>
+              ${commentCount} yorum
             </div>
         `;
         newsCard.onclick = () => {
