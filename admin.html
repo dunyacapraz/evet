@@ -59,47 +59,87 @@
     }
 
     function loadPendingNews() {
-        db.ref('news').orderByChild('approved').equalTo(false).on('value', (snapshot) => {
+        db.ref('news').on('value', (snapshot) => {
             const listDiv = document.getElementById('adminNewsList');
             if (!snapshot.exists()) {
-                listDiv.innerHTML = '<i>Onay bekleyen haber yok.</i>';
+                listDiv.innerHTML = '<i>Bildirim yok.</i>';
                 return;
             }
-            let html = '';
+
+            let pendingItems = [];
             snapshot.forEach(child => {
                 const d = child.val();
-                const hasPendingImages = d.pendingImages && d.pendingImages.length > 0;
-                html += `
-                <div class="admin-news-card" style="position:relative;">
-                    ${hasPendingImages ? `<div class="pending-img-notification">Yeni görsel eklenmiş!</div>` : ''}
-                    <img src="${d.imageUrl}" class="admin-news-image" alt="Haber Foto">
-                    <div class="admin-news-info">
-                        <div class="admin-news-title">${d.title}</div>
-                        <div class="admin-news-desc">${d.description}</div>
-                        <div class="admin-news-author">Ekleyen: ${d.authorName}</div>
-                        <button class="admin-btn" onclick="showDetailModal('${child.key}')">Detay</button>
-                        <button class="admin-btn approve" onclick="approveNews('${child.key}')">Onayla</button>
-                        <button class="admin-btn delete" onclick="deleteNews('${child.key}')">Sil</button>
-                    </div>
-                    ${hasPendingImages ? `
-                    <div class="pending-images-column">
-                        <div style="font-weight:600;margin-bottom:8px;color:#1a2236;">Onay Bekleyen Görseller:</div>
-                        <div class="pending-images-grid">
-                            ${Object.entries(d.pendingImages || {}).map(([key, img]) => `
-                                <div class="pending-image-card">
-                                    <img src="${img.url}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;">
-                                    <div style="font-size:0.9em;color:#666;margin-bottom:4px;">Ekleyen: ${img.uploader || 'İsimsiz'}</div>
-                                    <div style="display:flex;gap:8px;">
-                                        <button onclick="approvePendingImage('${child.key}','${key}','${img.url}')" class="admin-btn approve" style="padding:4px 12px;font-size:0.9em;">Onayla</button>
-                                        <button onclick="deletePendingImage('${child.key}','${key}')" class="admin-btn delete" style="padding:4px 12px;font-size:0.9em;">Sil</button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                const newsId = child.key;
+
+                // Onay bekleyen haberler
+                if (!d.approved) {
+                    pendingItems.push({
+                        type: 'news',
+                        id: newsId,
+                        data: d,
+                        timestamp: d.timestamp || 0
+                    });
+                }
+
+                // Onay bekleyen görseller
+                if (d.pendingImages) {
+                    Object.entries(d.pendingImages).forEach(([imgKey, img]) => {
+                        pendingItems.push({
+                            type: 'image',
+                            newsId: newsId,
+                            imgKey: imgKey,
+                            data: d,
+                            imageData: img,
+                            timestamp: img.timestamp || 0
+                        });
+                    });
+                }
+            });
+
+            // Zaman damgasına göre sırala (en yeniden en eskiye)
+            pendingItems.sort((a, b) => b.timestamp - a.timestamp);
+
+            if (pendingItems.length === 0) {
+                listDiv.innerHTML = '<i>Bildirim yok.</i>';
+                return;
+            }
+
+            let html = '';
+            pendingItems.forEach(item => {
+                if (item.type === 'news') {
+                    html += `
+                    <div class="admin-news-card" style="position:relative;">
+                        <div class="pending-notification">Yeni Haber</div>
+                        <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
+                        <div class="admin-news-info">
+                            <div class="admin-news-title">${item.data.title}</div>
+                            <div class="admin-news-desc">${item.data.description}</div>
+                            <div class="admin-news-author">Ekleyen: ${item.data.authorName}</div>
+                            <button class="admin-btn" onclick="showDetailModal('${item.id}')">Detay</button>
+                            <button class="admin-btn approve" onclick="approveNews('${item.id}')">Onayla</button>
+                            <button class="admin-btn delete" onclick="deleteNews('${item.id}')">Sil</button>
                         </div>
                     </div>
-                    ` : ''}
-                </div>
-                `;
+                    `;
+                } else if (item.type === 'image') {
+                    html += `
+                    <div class="admin-news-card" style="position:relative;">
+                        <div class="pending-notification">Yeni Görsel</div>
+                        <img src="${item.data.imageUrl}" class="admin-news-image" alt="Haber Foto">
+                        <div class="admin-news-info">
+                            <div class="admin-news-title">${item.data.title}</div>
+                            <div class="admin-news-desc">${item.data.description}</div>
+                            <div class="pending-image-info">
+                                <img src="${item.imageData.url}" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin:8px 0;">
+                                <div style="font-size:0.9em;color:#666;">Ekleyen: ${item.imageData.uploader || 'İsimsiz'}</div>
+                            </div>
+                            <button class="admin-btn" onclick="showDetailModal('${item.newsId}')">Detay</button>
+                            <button class="admin-btn approve" onclick="approvePendingImage('${item.newsId}','${item.imgKey}','${item.imageData.url}')">Onayla</button>
+                            <button class="admin-btn delete" onclick="deletePendingImage('${item.newsId}','${item.imgKey}')">Sil</button>
+                        </div>
+                    </div>
+                    `;
+                }
             });
             listDiv.innerHTML = html;
         });
