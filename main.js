@@ -134,7 +134,7 @@ async function vote(newsId, value) {
   setTimeout(() => updateVoteButtons(newsId), 100);
 }
 
-// Butonları IP'ye göre güncelle (isteğe bağlı optimistic parametre)
+// Butonları IP'ye göre güncelle (Reddit mantığı: aynı anda sadece bir oy aktif)
 async function updateVoteButtons(newsId, optimisticVote) {
   const ip = await getUserIP();
   const ipKey = ip.replace(/\./g, '_');
