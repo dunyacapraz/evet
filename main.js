@@ -23,7 +23,8 @@ function renderNews(newsArr) {
         const newsCard = document.createElement('div');
         newsCard.className = 'news-card';
         const votedKey = `voted_${item.id}`;
-        const voted = localStorage.getItem(votedKey);
+        const upvotes = item.upvotes || 0;
+        const downvotes = item.downvotes || 0;
         newsCard.innerHTML = `
             <img src="${item.imageUrl}" class="news-image" alt="${item.title}" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\\'news-image\\'>RESİM</div>');">
             <div class="news-bottom">
@@ -33,13 +34,14 @@ function renderNews(newsArr) {
                     <div class="news-author">Ekleyen: ${item.authorName}</div>
                 </div>
                 <div class="vote-section">
-                    <button class="vote-btn up" id="up-btn-${item.id}" ${voted === 'up' ? 'data-active=\"true\"' : ''} onclick="event.stopPropagation(); vote('${item.id}', 1)">
+                    <button class="vote-btn up" id="up-btn-${item.id}" onclick="event.stopPropagation(); vote('${item.id}', 1)">
                       <svg class="vote-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#1eae60"/><path d="M6 10.5l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
-                    <span class="vote-count" id="vote-count-${item.id}">${item.votes || 0}</span>
-                    <button class="vote-btn down" id="down-btn-${item.id}" ${voted === 'down' ? 'data-active=\"true\"' : ''} onclick="event.stopPropagation(); vote('${item.id}', -1)">
+                    <span class="vote-count" id="upvote-count-${item.id}" style="color:#1eae60;font-weight:bold;">+${upvotes}</span>
+                    <button class="vote-btn down" id="down-btn-${item.id}" onclick="event.stopPropagation(); vote('${item.id}', -1)">
                       <svg class="vote-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#e53e3e"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
                     </button>
+                    <span class="vote-count" id="downvote-count-${item.id}" style="color:#e53e3e;font-weight:bold;">-${downvotes}</span>
                 </div>
             </div>
         `;
@@ -88,7 +90,7 @@ async function getUserIP() {
   }
 }
 
-// IP tabanlı oy ver / geri çek / geçiş yap (transaction ile, kök seviyede)
+// IP tabanlı oy ver / geri çek / geçiş yap (upvotes/downvotes ayrı sayaç)
 async function vote(newsId, value) {
   const ip = await getUserIP();
   const ipKey = ip.replace(/\./g, '_');
@@ -98,30 +100,33 @@ async function vote(newsId, value) {
   await newsRef.transaction(news => {
     if (!news) return news;
     if (!news.votesByIP) news.votesByIP = {};
-    if (typeof news.votes !== 'number') news.votes = 0;
+    if (typeof news.upvotes !== 'number') news.upvotes = 0;
+    if (typeof news.downvotes !== 'number') news.downvotes = 0;
     const currentVote = news.votesByIP[ipKey] || null;
     if (value === 1) {
       if (currentVote === 'up') {
         // Oyunu geri çek
         news.votesByIP[ipKey] = null;
-        news.votes -= 1;
+        news.upvotes -= 1;
       } else if (currentVote === 'down') {
         news.votesByIP[ipKey] = 'up';
-        news.votes += 2;
+        news.upvotes += 1;
+        news.downvotes -= 1;
       } else {
         news.votesByIP[ipKey] = 'up';
-        news.votes += 1;
+        news.upvotes += 1;
       }
     } else if (value === -1) {
       if (currentVote === 'down') {
         news.votesByIP[ipKey] = null;
-        news.votes += 1;
+        news.downvotes -= 1;
       } else if (currentVote === 'up') {
         news.votesByIP[ipKey] = 'down';
-        news.votes -= 2;
+        news.downvotes += 1;
+        news.upvotes -= 1;
       } else {
         news.votesByIP[ipKey] = 'down';
-        news.votes -= 1;
+        news.downvotes += 1;
       }
     }
     return news;
