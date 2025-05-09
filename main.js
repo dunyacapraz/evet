@@ -16,15 +16,19 @@ const db = firebase.database();
 
 let newsListener = null;
 
-function renderNews(newsArr) {
+async function renderNews(newsArr) {
     const container = document.querySelector('.container');
     container.innerHTML = '';
-    newsArr.forEach((item) => {
+    for (const item of newsArr) {
         const newsCard = document.createElement('div');
         newsCard.className = 'news-card';
         const votedKey = `voted_${item.id}`;
         const upvotes = item.upvotes || 0;
         const downvotes = item.downvotes || 0;
+        // Yorum sayısını çek
+        let commentCount = 0;
+        const commentsSnap = await db.ref('news/' + item.id + '/comments').once('value');
+        commentCount = commentsSnap.exists() ? commentsSnap.numChildren() : 0;
         newsCard.innerHTML = `
             <img src="${item.imageUrl}" class="news-image" alt="${item.title}" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\\'news-image\\'>RESİM</div>');">
             <div class="news-bottom">
@@ -32,6 +36,7 @@ function renderNews(newsArr) {
                     <div class="news-title">${item.title}</div>
                     <div class="news-desc">${item.description}</div>
                     <div class="news-author">Ekleyen: ${item.authorName}</div>
+                    <div class="comment-count-footer">💬 ${commentCount} yorum</div>
                 </div>
                 <div class="vote-section">
                     <button class="vote-btn up" id="up-btn-${item.id}" onclick="event.stopPropagation(); vote('${item.id}', 1)">
@@ -50,7 +55,7 @@ function renderNews(newsArr) {
         };
         container.appendChild(newsCard);
         updateVoteButtons(item.id);
-    });
+    }
 }
 
 function loadNews() {
@@ -60,7 +65,7 @@ function loadNews() {
     }
     const ref = db.ref('news').orderByChild('timestamp');
     newsListener = ref;
-    ref.on('value', (snapshot) => {
+    ref.on('value', async (snapshot) => {
         const news = [];
         snapshot.forEach((childSnapshot) => {
             const data = childSnapshot.val();
@@ -71,7 +76,7 @@ function loadNews() {
                 });
             }
         });
-        renderNews(news);
+        await renderNews(news);
     });
 }
 
