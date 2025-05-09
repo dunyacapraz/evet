@@ -183,7 +183,7 @@ async function uploadToCloudinary(file, uploadPreset = 'unsigned_preset') {
     return data.secure_url; // Yüklenen görselin linki
 }
 
-// Haber ekleme işlemi
+
 async function submitNews(event) {
     console.log('submitNews çalıştı');
     event.preventDefault();
@@ -231,11 +231,11 @@ async function submitNews(event) {
             votes: 0,
             approved: false
         });
-        showToast('Haber başarıyla eklendi!');
+        showToast('Başarıyla eklendi!');
         closeModal();
         document.getElementById('newsForm').reset();
     } catch (error) {
-        showToast('Haber eklenirken bir hata oluştu: ' + error.message, 'error');
+        showToast('Eklenirken bir hata oluştu: ' + error.message, 'error');
     }
     submitBtn.disabled = false;
     submitBtn.innerHTML = oldBtnHtml;
