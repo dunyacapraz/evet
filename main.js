@@ -149,21 +149,13 @@ async function updateVoteButtons(newsId, optimisticVote) {
   const upBtn = document.getElementById('up-btn-' + newsId);
   const downBtn = document.getElementById('down-btn-' + newsId);
   if (!upBtn || !downBtn) return;
+  // Önce her iki butondan da active class'ı kaldır
+  upBtn.classList.remove('active');
+  downBtn.classList.remove('active');
   if (currentVote === 'up') {
-    upBtn.disabled = false;
     upBtn.classList.add('active');
-    downBtn.disabled = false;
-    downBtn.classList.remove('active');
   } else if (currentVote === 'down') {
-    downBtn.disabled = false;
     downBtn.classList.add('active');
-    upBtn.disabled = false;
-    upBtn.classList.remove('active');
-  } else {
-    upBtn.disabled = false;
-    downBtn.disabled = false;
-    upBtn.classList.remove('active');
-    downBtn.classList.remove('active');
   }
 }
 
