@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Haber Detay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .haber-detay-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px;
+        }
+        .haber-detay-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .haber-detay-image {
+            width: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+        .haber-detay-desc {
+            font-size: 1.1em;
+            color: #444;
+            margin-bottom: 18px;
+        }
+        .haber-detay-author {
+            color: #718096;
+            margin-bottom: 18px;
+        }
+        .haber-detay-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .haber-detay-gallery img {
+            width: 320px;
+            height: 220px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .haber-detay-votes {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1a2236;
+            margin-bottom: 12px;
+        }
+        /* Modal (büyük fotoğraf) */
+        .modal-img-bg {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-img-bg.active { display: flex; }
+        .modal-img-bg img {
+            max-width: 90vw;
+            max-height: 80vh;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div style="width:100vw;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:32px;display:flex;align-items:center;justify-content:center;padding:16px 0;">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT06sj8sF36ja8Y2dHY9gAwmxZgXfrrTEGcDQ&s" alt="Header" style="height:60px;object-fit:contain;">
+    </div>
+    <a href="index.html" style="position:fixed;top:24px;left:24px;z-index:1002;text-decoration:none;background:#1eae60;color:#fff;padding:8px 18px;border-radius:8px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.08);">&larr; Geri Dön</a>
+    <div class="haber-detay-container" id="haberDetay">
+        Yükleniyor...
+    </div>
+    <div class="haber-detay-container">
+        <h3>Yorumlar</h3>
+        <div id="yorumlarListesi">Yorumlar yükleniyor...</div>
+        <form id="yorumForm" style="margin-top:24px;">
+            <div class="form-group">
+                <label for="yorumIsim">İsminiz</label>
+                <input type="text" id="yorumIsim" required style="width:100%;padding:8px;margin-bottom:8px;">
+            </div>
+            <div class="form-group">
+                <label for="yorumMetin">Yorumunuz</label>
+                <textarea id="yorumMetin" required style="width:100%;padding:8px;"></textarea>
+            </div>
+            <button type="submit" class="submit-btn" style="margin-top:8px;">Yorum Ekle</button>
+        </form>
+    </div>
+    <div class="modal-img-bg" id="modalImgBg" onclick="this.classList.remove('active')">
+        <img id="modalImg" src="" alt="Büyük Fotoğraf">
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+    // Firebase config'iniz
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP78KB0fZiLqGc4L-DZtA2Llgzv0_NGhs",
+        authDomain: "evet-3d487.firebaseapp.com",
+        projectId: "evet-3d487",
+        databaseURL: "https://evet-3d487-default-rtdb.firebaseio.com",
+        storageBucket: "evet-3d487.appspot.com",
+        messagingSenderId: "215902499756",
+        appId: "1:215902499756:web:56ea6711e960d16d898009",
+        measurementId: "G-4TNJL8PTC1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // URL'den id parametresini al
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+    const newsId = getQueryParam('id');
+
+    async function loadNewsDetail() {
+        const detayDiv = document.getElementById('haberDetay');
+        if (!newsId) {
+            detayDiv.innerHTML = '<b>Haber bulunamadı.</b>';
+            return;
+        }
+        detayDiv.innerHTML = 'Yükleniyor...';
+        db.ref('news/' + newsId).on('value', (snap) => {
+            if (!snap.exists()) {
+                detayDiv.innerHTML = '<b>Haber bulunamadı.</b>';
+                return;
+            }
+            const data = snap.val();
+            // Oy durumu
+            const votedKey = `voted_${newsId}`;
+            const voted = localStorage.getItem(votedKey);
+            detayDiv.innerHTML = `
+                <img src="${data.imageUrl}" class="haber-detay-image" alt="${data.title}">
+                <div class="haber-detay-title">${data.title}</div>
+                <div class="haber-detay-desc">${data.description}</div>
+                <div class="haber-detay-author">Ekleyen: ${data.authorName}</div>
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+                    <button class="vote-btn up" id="up-btn" ${voted === 'up' ? 'data-active=\"true\"' : ''} style="font-size:1.2em;">
+                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="+1" class="vote-icon">
+                    </button>
+                    <span class="haber-detay-votes" id="vote-count">${data.votes || 0}</span>
+                    <button class="vote-btn down" id="down-btn" ${voted === 'down' ? 'data-active=\"true\"' : ''} style="font-size:1.2em;">
+                        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="-1" class="vote-icon">
+                    </button>
+                </div>
+                <div class="haber-detay-gallery">
+                    ${(data.galleryImages && data.galleryImages.length > 0) ? data.galleryImages.map((url, i) => `<img src='${url}' alt='Galeri' data-idx='${i}'>`).join('') : ''}
+                </div>
+                <form id="addImageForm" style="margin-top:18px;display:flex;flex-direction:column;gap:10px;">
+                  <label style="font-weight:600;">Bu habere görsel ekle:</label>
+                  <input type="text" id="addImageName" placeholder="İsminiz" required style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                  <input type="file" id="addImageFile" accept="image/*" required style="padding:8px;">
+                  <button type="submit" class="submit-btn">Görseli Gönder</button>
+                </form>
+            `;
+            // Oy butonları işlevi
+            document.getElementById('up-btn').onclick = function(e) {
+                e.stopPropagation();
+                voteDetail(1);
+            };
+            document.getElementById('down-btn').onclick = function(e) {
+                e.stopPropagation();
+                voteDetail(-1);
+            };
+            updateVoteButtonsDetail();
+            // Galeri görsellerine tıklama (modal aç)
+            const galeriImgs = detayDiv.querySelectorAll('.haber-detay-gallery img');
+            galeriImgs.forEach(img => {
+                img.onclick = function(e) {
+                    e.stopPropagation();
+                    document.getElementById('modalImg').src = this.src;
+                    document.getElementById('modalImgBg').classList.add('active');
+                };
+            });
+            // Görsel ekleme formu işlemleri (haber geldikten sonra tanımla)
+            const addImageForm = document.getElementById('addImageForm');
+            if (addImageForm) {
+              addImageForm.onsubmit = async function(e) {
+                e.preventDefault();
+                if (!newsId) {
+                  showToast('Haber bulunamadı.', 'error');
+                  return;
+                }
+                const name = document.getElementById('addImageName').value.trim();
+                const fileInput = document.getElementById('addImageFile');
+                const file = fileInput.files[0];
+                const btn = addImageForm.querySelector('button[type=submit]');
+                const oldBtnHtml = btn.innerHTML;
+                if (!name || !file) return;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span>Yükleniyor...';
+                try {
+                  // Cloudinary'ye yükle
+                  const url = await uploadToCloudinary(file, 'unsigned_preset');
+                  // pendingImages'a ekle
+                  await db.ref('news/' + newsId + '/pendingImages').push({
+                    url,
+                    uploader: name,
+                    timestamp: Date.now()
+                  });
+                  showToast('Görsel onay için gönderildi!');
+                  addImageForm.reset();
+                } catch (err) {
+                  showToast('Görsel yüklenemedi: ' + err.message, 'error');
+                }
+                btn.disabled = false;
+                btn.innerHTML = oldBtnHtml;
+              };
+            }
+        });
+    }
+    loadNewsDetail();
+
+    // Yorumları yükle
+    function loadComments() {
+        const yorumlarDiv = document.getElementById('yorumlarListesi');
+        db.ref('news/' + newsId + '/comments').on('value', (snapshot) => {
+            if (!snapshot.exists()) {
+                yorumlarDiv.innerHTML = '<i>Henüz yorum yok.</i>';
+                return;
+            }
+            const yorumlar = [];
+            snapshot.forEach(child => {
+                yorumlar.push(child.val());
+            });
+            yorumlarDiv.innerHTML = yorumlar.map(y => `
+                <div style="border-bottom:1px solid #eee;padding:8px 0;">
+                    <b>${y.name}</b><br>
+                    <span style="color:#444;">${y.text}</span>
+                </div>
+            `).join('');
+        });
+    }
+    loadComments();
+
+    // Yorum ekleme
+    document.getElementById('yorumForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('yorumIsim').value.trim();
+        const text = document.getElementById('yorumMetin').value.trim();
+        if (!name || !text) return;
+        await db.ref('news/' + newsId + '/comments').push({
+            name,
+            text,
+            timestamp: Date.now()
+        });
+        document.getElementById('yorumForm').reset();
+    };
+
+    // Detayda oy verme fonksiyonu
+    function voteDetail(value) {
+        const votedKey = `voted_${newsId}`;
+        const voteCountSpan = document.getElementById('vote-count');
+        let currentCount = parseInt(voteCountSpan.textContent, 10) || 0;
+        const upBtn = document.getElementById('up-btn');
+        const downBtn = document.getElementById('down-btn');
+        const currentVote = localStorage.getItem(votedKey);
+        if (value === 1) {
+            if (currentVote === 'up') {
+                localStorage.removeItem(votedKey);
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) - 1);
+            } else if (currentVote === 'down') {
+                localStorage.setItem(votedKey, 'up');
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) + 2);
+            } else {
+                localStorage.setItem(votedKey, 'up');
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) + 1);
+            }
+        } else if (value === -1) {
+            if (currentVote === 'down') {
+                localStorage.removeItem(votedKey);
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) + 1);
+            } else if (currentVote === 'up') {
+                localStorage.setItem(votedKey, 'down');
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) - 2);
+            } else {
+                localStorage.setItem(votedKey, 'down');
+                db.ref('news/' + newsId + '/votes').transaction(v => (v || 0) - 1);
+            }
+        }
+        setTimeout(updateVoteButtonsDetail, 100);
+    }
+    function updateVoteButtonsDetail() {
+        const votedKey = `voted_${newsId}`;
+        const upBtn = document.getElementById('up-btn');
+        const downBtn = document.getElementById('down-btn');
+        const currentVote = localStorage.getItem(votedKey);
+        if (!upBtn || !downBtn) return;
+        if (currentVote === 'up') {
+            upBtn.classList.add('active');
+            downBtn.classList.remove('active');
+        } else if (currentVote === 'down') {
+            downBtn.classList.add('active');
+            upBtn.classList.remove('active');
+        } else {
+            upBtn.classList.remove('active');
+            downBtn.classList.remove('active');
+        }
+    }
+
+    // Cloudinary fonksiyonu (main.js ile aynı olmalı)
+    async function uploadToCloudinary(file, uploadPreset = 'unsigned_preset') {
+      const url = `https://api.cloudinary.com/v1_1/dbr3vyfbr/image/upload`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      const response = await fetch(url, { method: 'POST', body: formData });
+      const data = await response.json();
+      return data.secure_url;
+    }
+    // Toast fonksiyonu (main.js ile aynı olmalı)
+    function showToast(message, type = '') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type ? ' ' + type : '');
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 2500);
+    }
+    </script>
+</body>
+</html> 

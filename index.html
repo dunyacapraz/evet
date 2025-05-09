@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modern Haber Sitesi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="modern-header">
+        <span class="modern-header-title">TERRIER Mİ DEĞİL Mİ?</span>
+    </div>
+    <style>
+        .modern-header {
+            width: 100vw;
+            background: transparent;
+            box-shadow: none;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 0 22px 0;
+        }
+        .modern-header-title {
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            font-size: 2.5em;
+            font-weight: 900;
+            letter-spacing: 2.5px;
+            color: #1a2236;
+            text-shadow: 0 4px 24px rgba(30,174,96,0.10), 0 1.5px 0 #fff;
+            transition: color 0.3s;
+        }
+    </style>
+    <button class="add-news-btn" onclick="openModal()">Şüpheli Ekle</button>
+    <div class="modal" id="newsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Şüpheli Ekle</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="newsForm" onsubmit="submitNews(event)">
+                <div class="form-group">
+                    <label for="authorName">İsminiz</label>
+                    <input type="text" id="authorName" required>
+                </div>
+                <div class="form-group">
+                    <label for="newsTitle">Şüphelinin Adı</label>
+                    <input type="text" id="newsTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="newsDesc">Nasıl şüphelendiniz?</label>
+                    <textarea id="newsDesc" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="newsMainImage">Şüphelinin Profili</label>
+                    <input type="file" id="newsMainImage" accept="image/*" required>
+                </div>
+                <div class="form-group">
+                    <label for="newsGalleryImages">Olayla İlgili Ekran Görüntüleri</label>
+                    <input type="file" id="newsGalleryImages" accept="image/*" multiple>
+                </div>
+                <button type="submit" class="submit-btn">Şüpheliyi Ekle</button>
+            </form>
+        </div>
+    </div>
+    <div class="container">
+        <!-- News cards will be dynamically added here -->
+    </div>
+    <div id="toast-container"></div>
+    <!-- Firebase SDK'ları -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+body {
+    background: #f4f6fa;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 40px 0;
+}
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    justify-content: center;
+    padding-top: 80px;
+}
+.news-card {
+    width: 320px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.18s, box-shadow 0.18s;
+    cursor: pointer;
+    border: none;
+}
+.news-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+}
+.news-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: #e3e3e3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    color: #555;
+}
+.news-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 18px 16px 18px;
+}
+.news-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+}
+.news-title {
+    font-size: 1.15em;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #1a2236;
+}
+.news-desc {
+    font-size: 1em;
+    color: #4a5568;
+    line-height: 1.4;
+}
+.news-author {
+    font-size: 0.9em;
+    color: #718096;
+    margin-top: 8px;
+}
+.vote-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 18px;
+    min-width: 48px;
+}
+.vote-btn {
+    background: #f1f5fb;
+    border: none;
+    border-radius: 6px;
+    padding: 2px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: background 0.18s, color 0.18s;
+    overflow: hidden;
+}
+.vote-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    display: block;
+}
+.vote-btn.up {
+    color: #1eae60;
+}
+.vote-btn.down {
+    color: #e53e3e;
+}
+.vote-btn.up:hover {
+    background: #d1f7e6;
+}
+.vote-btn.down:hover {
+    background: #ffe0e0;
+}
+.vote-count {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #1a2236;
+    margin-bottom: 4px;
+}
+@media (max-width: 700px) {
+    .container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .news-card {
+        width: 95vw;
+        min-width: 0;
+    }
+}
+/* Haber Ekleme Butonu ve Modal Stilleri */
+.add-news-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    background: #1eae60;
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.add-news-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+.add-news-btn::after {
+    content: "+";
+    font-size: 20px;
+    font-weight: bold;
+}
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1001;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.modal-header h2 {
+    margin: 0;
+    color: #1a2236;
+}
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #1a2236;
+    font-weight: 500;
+}
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+.form-group textarea {
+    height: 100px;
+    resize: vertical;
+}
+.submit-btn {
+    background: #1eae60;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+}
+.submit-btn:hover {
+    background: #189c54;
+}
+/* Admin Paneli */
+.admin-container {
+    max-width: 700px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 32px;
+}
+.admin-news-card {
+    border: 1px solid #e3e3e3;
+    border-radius: 10px;
+    padding: 18px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    background: #f9f9f9;
+}
+.admin-news-image {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #eee;
+}
+.admin-news-info {
+    flex: 1;
+}
+.admin-news-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 4px;
+}
+.admin-news-desc {
+    color: #444;
+    font-size: 0.98em;
+    margin-bottom: 6px;
+}
+.admin-news-author {
+    color: #888;
+    font-size: 0.93em;
+    margin-bottom: 6px;
+}
+.admin-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 8px;
+    font-size: 1em;
+    transition: background 0.15s;
+}
+.admin-btn.approve { background: #1eae60; color: #fff; }
+.admin-btn.approve:hover { background: #189c54; }
+.admin-btn.delete { background: #e53e3e; color: #fff; }
+.admin-btn.delete:hover { background: #c53030; }
+.admin-panel-title {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 24px;
+    color: #1a2236;
+    text-align: center;
+}
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #1eae60;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+}
+#toast-container {
+    position: fixed;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+.toast {
+    background: #1eae60;
+    color: #fff;
+    padding: 14px 32px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 1.1em;
+    font-weight: 500;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+    opacity: 0;
+    animation: toast-in 0.3s forwards, toast-out 0.3s 2.2s forwards;
+    pointer-events: auto;
+}
+.toast.error {
+    background: #e53e3e;
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-20px);}
+    to   { opacity: 1; transform: translateY(0);}
+}
+@keyframes toast-out {
+    to   { opacity: 0; transform: translateY(-20px);}
+} 
