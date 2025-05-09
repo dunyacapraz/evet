@@ -68,8 +68,10 @@
             let html = '';
             snapshot.forEach(child => {
                 const d = child.val();
+                const hasPendingImages = d.pendingImages && d.pendingImages.length > 0;
                 html += `
-                <div class="admin-news-card">
+                <div class="admin-news-card" style="position:relative;">
+                    ${hasPendingImages ? `<div class="pending-img-notification">Yeni görsel eklenmiş!</div>` : ''}
                     <img src="${d.imageUrl}" class="admin-news-image" alt="Haber Foto">
                     <div class="admin-news-info">
                         <div class="admin-news-title">${d.title}</div>

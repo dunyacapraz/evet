@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Moderatör Paneli - Haber Onay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-panel-title">Onay Bekleyen Haberler</div>
+        <div id="adminNewsList">Yükleniyor...</div>
+    </div>
+    <!-- Detay Modalı -->
+    <div id="detailModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;">
+      <div id="detailModalContent" style="background:#fff;max-width:600px;width:95vw;padding:32px 24px 24px 24px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;max-height:90vh;overflow-y:auto;">
+        <button onclick="closeDetailModal()" style="position:absolute;top:12px;right:18px;font-size:2em;background:none;border:none;cursor:pointer;color:#888;">&times;</button>
+        <div id="detailModalBody">Yükleniyor...</div>
+      </div>
+    </div>
+    <!-- Galeri Büyütme Modalı -->
+    <div id="galleryImgModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:4000;align-items:center;justify-content:center;">
+      <img id="galleryImgModalImg" src="" style="max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+    // Firebase config'iniz
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP78KB0fZiLqGc4L-DZtA2Llgzv0_NGhs",
+        authDomain: "evet-3d487.firebaseapp.com",
+        projectId: "evet-3d487",
+        databaseURL: "https://evet-3d487-default-rtdb.firebaseio.com",
+        storageBucket: "evet-3d487.appspot.com",
+        messagingSenderId: "215902499756",
+        appId: "1:215902499756:web:56ea6711e960d16d898009",
+        measurementId: "G-4TNJL8PTC1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Toast fonksiyonu
+    function showToast(message, type = '') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type ? ' ' + type : '');
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 2500);
+    }
+
+    function loadPendingNews() {
+        db.ref('news').orderByChild('approved').equalTo(false).on('value', (snapshot) => {
+            const listDiv = document.getElementById('adminNewsList');
+            if (!snapshot.exists()) {
+                listDiv.innerHTML = '<i>Onay bekleyen haber yok.</i>';
+                return;
+            }
+            let html = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                const hasPendingImages = d.pendingImages && d.pendingImages.length > 0;
+                html += `
+                <div class="admin-news-card" style="position:relative;">
+                    ${hasPendingImages ? `<div class="pending-img-notification">Yeni görsel eklenmiş!</div>` : ''}
+                    <img src="${d.imageUrl}" class="admin-news-image" alt="Haber Foto">
+                    <div class="admin-news-info">
+                        <div class="admin-news-title">${d.title}</div>
+                        <div class="admin-news-desc">${d.description}</div>
+                        <div class="admin-news-author">Ekleyen: ${d.authorName}</div>
+                        <button class="admin-btn" onclick="showDetailModal('${child.key}')">Detay</button>
+                        <button class="admin-btn approve" onclick="approveNews('${child.key}')">Onayla</button>
+                    </div>
+                </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+        });
+    }
+    loadPendingNews();
+
+    window.approveNews = function(id) {
+        db.ref('news/' + id).update({approved: true});
+        showToast('Haber onaylandı!');
+    }
+    window.showDetailModal = function(id) {
+        const modal = document.getElementById('detailModal');
+        const body = document.getElementById('detailModalBody');
+        modal.style.display = 'flex';
+        body.innerHTML = 'Yükleniyor...';
+        db.ref('news/' + id).once('value').then(snap => {
+            if (!snap.exists()) { body.innerHTML = '<b>Haber bulunamadı.</b>'; return; }
+            const d = snap.val();
+            body.innerHTML = `
+              <img src="${d.imageUrl}" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-bottom:18px;" alt="Başlık Fotoğrafı">
+              <div style="font-size:1.4em;font-weight:bold;margin-bottom:8px;">${d.title}</div>
+              <div style="color:#444;font-size:1.08em;margin-bottom:12px;">${d.description}</div>
+              <div style="color:#888;font-size:0.98em;margin-bottom:16px;">Ekleyen: ${d.authorName}</div>
+              <div style="margin-bottom:10px;font-weight:600;">Galeri Fotoğrafları:</div>
+              <div id='adminGalleryImgs' style="display:flex;flex-wrap:wrap;gap:10px;">
+                ${(d.galleryImages||[]).map(url => `<img src='${url}' style='width:140px;height:100px;object-fit:cover;border-radius:6px;background:#eee;cursor:pointer;'>`).join('')}
+              </div>
+            `;
+            // Galeri görsellerine tıklama ile büyütme
+            setTimeout(() => {
+              const imgs = document.querySelectorAll('#adminGalleryImgs img');
+              imgs.forEach(img => {
+                img.onclick = function(e) {
+                  e.stopPropagation();
+                  document.getElementById('galleryImgModalImg').src = this.src;
+                  document.getElementById('galleryImgModal').style.display = 'flex';
+                };
+              });
+            }, 100);
+        });
+    }
+    window.closeDetailModal = function() {
+        document.getElementById('detailModal').style.display = 'none';
+    }
+    // Galeri büyütme modalı kapama
+    document.getElementById('galleryImgModal').onclick = function() {
+      this.style.display = 'none';
+    };
+    </script>
+    <div id="toast-container"></div>
+</body>
+</html> 
