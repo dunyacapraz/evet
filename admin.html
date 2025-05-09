@@ -81,6 +81,23 @@
                         <button class="admin-btn approve" onclick="approveNews('${child.key}')">Onayla</button>
                         <button class="admin-btn delete" onclick="deleteNews('${child.key}')">Sil</button>
                     </div>
+                    ${hasPendingImages ? `
+                    <div class="pending-images-column">
+                        <div style="font-weight:600;margin-bottom:8px;color:#1a2236;">Onay Bekleyen Görseller:</div>
+                        <div class="pending-images-grid">
+                            ${Object.entries(d.pendingImages || {}).map(([key, img]) => `
+                                <div class="pending-image-card">
+                                    <img src="${img.url}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;">
+                                    <div style="font-size:0.9em;color:#666;margin-bottom:4px;">Ekleyen: ${img.uploader || 'İsimsiz'}</div>
+                                    <div style="display:flex;gap:8px;">
+                                        <button onclick="approvePendingImage('${child.key}','${key}','${img.url}')" class="admin-btn approve" style="padding:4px 12px;font-size:0.9em;">Onayla</button>
+                                        <button onclick="deletePendingImage('${child.key}','${key}')" class="admin-btn delete" style="padding:4px 12px;font-size:0.9em;">Sil</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
                 `;
             });
