@@ -2,14 +2,137 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Moderatör Paneli - Haber Onay</title>
+    <title>Yönetici Paneli</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0;
+            background: #f4f6fa;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .admin2-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 240px;
+            background: #1a2236;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 32px 0 0 0;
+            min-height: 100vh;
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            z-index: 10;
+        }
+        .sidebar .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            margin-bottom: 32px;
+            text-align: center;
+            color: #1eae60;
+        }
+        .sidebar .menu {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .sidebar .menu-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.08em;
+            text-align: left;
+            padding: 14px 32px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid transparent;
+        }
+        .sidebar .menu-btn.active, .sidebar .menu-btn:hover {
+            background: #232d47;
+            color: #1eae60;
+            border-left: 4px solid #1eae60;
+        }
+        .sidebar .bottom {
+            padding: 24px 0 16px 0;
+            text-align: center;
+            font-size: 0.98em;
+            color: #b0b0b0;
+        }
+        .content-area {
+            margin-left: 240px;
+            flex: 1;
+            padding: 36px 36px 36px 36px;
+            min-height: 100vh;
+            background: #f4f6fa;
+        }
+        .admin2-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        .admin2-header .welcome {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1a2236;
+        }
+        .admin2-header .logout-btn {
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .admin2-header .logout-btn:hover {
+            background: #c53030;
+        }
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar { width: 60px; min-width: 60px; }
+            .sidebar .logo, .sidebar .bottom { display: none; }
+            .sidebar .menu-btn { padding: 14px 10px; font-size: 1.1em; justify-content: center; }
+            .content-area { margin-left: 60px; padding: 18px 6vw 18px 6vw; }
+        }
+        @media (max-width: 600px) {
+            .content-area { padding: 10px 2vw 10px 2vw; }
+        }
+    </style>
 </head>
 <body>
-    <div class="admin-container">
-        <div class="admin-panel-title">Onay Bekleyen Haberler</div>
-        <div id="adminNewsList">Yükleniyor...</div>
+    <div class="admin2-container">
+        <nav class="sidebar">
+            <div class="logo">Yönetici</div>
+            <div class="menu">
+                <button class="menu-btn" id="homeTabBtn" style="color:#1eae60;font-weight:bold;"><span>🏠</span> Anasayfa</button>
+                <button class="menu-btn active" data-tab="pending"><span>🕒</span> Onay Bekleyenler</button>
+                <button class="menu-btn" data-tab="all"><span>📰</span> Tüm Haberler</button>
+                <button class="menu-btn" data-tab="comments"><span>💬</span> Yorumlar</button>
+                <button class="menu-btn" data-tab="stats"><span>📊</span> İstatistikler</button>
+                <button class="menu-btn" data-tab="settings"><span>⚙️</span> Ayarlar</button>
+            </div>
+            <div class="bottom">v1.0 • Admin Paneli</div>
+        </nav>
+        <main class="content-area">
+            <div class="admin2-header">
+                <div class="welcome">Hoş geldiniz, Admin!</div>
+                <button class="logout-btn" onclick="alert('Çıkış fonksiyonu örnek!')">Çıkış Yap</button>
+            </div>
+            <div id="tabContent">
+                <!-- Sekme içerikleri buraya gelecek -->
+            </div>
+        </main>
     </div>
     <!-- Detay Modalı -->
     <div id="detailModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;">
@@ -39,94 +162,238 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Toast fonksiyonu
-    function showToast(message, type = '') {
-      let container = document.getElementById('toast-container');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-      }
-      const toast = document.createElement('div');
-      toast.className = 'toast' + (type ? ' ' + type : '');
-      toast.textContent = message;
-      container.appendChild(toast);
-      setTimeout(() => { toast.remove(); }, 2500);
+    // Sekme geçişleri
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            showTab(btn.getAttribute('data-tab'));
+        }
+    });
+
+    // Anasayfa butonu için özel handler
+    document.getElementById('homeTabBtn').onclick = function() {
+        document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        showTab('all');
+    };
+
+    // Sekme içeriklerini yükle
+    function showTab(tab) {
+        if (tab === 'pending') loadPendingTab();
+        else if (tab === 'all') loadAllTab();
+        else if (tab === 'comments') loadCommentsTab();
+        else if (tab === 'stats') loadStatsTab();
+        else if (tab === 'settings') loadSettingsTab();
     }
 
-    function loadPendingNews() {
-        db.ref('news').orderByChild('approved').equalTo(false).on('value', (snapshot) => {
-            const listDiv = document.getElementById('adminNewsList');
-            if (!snapshot.exists()) {
-                listDiv.innerHTML = '<i>Onay bekleyen haber yok.</i>';
-                return;
-            }
-            let html = '';
+    // Varsayılan sekme
+    showTab('pending');
+
+    // Onay Bekleyenler
+    function loadPendingTab() {
+        const el = document.getElementById('tabContent');
+        el.innerHTML = '<b>Yükleniyor...</b>';
+        db.ref('news').once('value').then(snapshot => {
+            let html = '<h2>Onay Bekleyenler</h2>';
+            let found = false;
             snapshot.forEach(child => {
                 const d = child.val();
-                const hasPendingImages = d.pendingImages && d.pendingImages.length > 0;
-                html += `
-                <div class="admin-news-card" style="position:relative;">
-                    ${hasPendingImages ? `<div class="pending-img-notification">Yeni görsel eklenmiş!</div>` : ''}
-                    <img src="${d.imageUrl}" class="admin-news-image" alt="Haber Foto">
-                    <div class="admin-news-info">
-                        <div class="admin-news-title">${d.title}</div>
-                        <div class="admin-news-desc">${d.description}</div>
-                        <div class="admin-news-author">Ekleyen: ${d.authorName}</div>
-                        <button class="admin-btn" onclick="showDetailModal('${child.key}')">Detay</button>
-                        <button class="admin-btn approve" onclick="approveNews('${child.key}')">Onayla</button>
-                    </div>
-                </div>
-                `;
+                if (!d.approved) {
+                    found = true;
+                    html += `
+                        <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px #0001;padding:18px 22px;margin-bottom:18px;">
+                            <b>${d.title}</b> <span style="color:#888;font-size:0.95em;">(Ekleyen: ${d.authorName})</span><br>
+                            <span style="color:#444;">${d.description}</span><br>
+                            <button onclick="approveNews('${child.key}')" style="background:#1eae60;color:#fff;border:none;padding:7px 18px;border-radius:6px;margin-top:10px;cursor:pointer;">Onayla</button>
+                            <button onclick="deleteNews('${child.key}')" style="background:#e53e3e;color:#fff;border:none;padding:7px 18px;border-radius:6px;margin-top:10px;cursor:pointer;">Sil</button>
+                        </div>
+                    `;
+                }
             });
-            listDiv.innerHTML = html;
+            if (!found) html += '<i>Onay bekleyen haber yok.</i>';
+            el.innerHTML = html;
         });
     }
-    loadPendingNews();
 
+    // Tüm Haberler
+    function loadAllTab() {
+        const el = document.getElementById('tabContent');
+        el.innerHTML = '<b>Yükleniyor...</b>';
+        db.ref('news').orderByChild('timestamp').once('value').then(snapshot => {
+            let html = '<h2>Tüm Haberler</h2>';
+            snapshot.forEach(child => {
+                const d = child.val();
+                html += `
+                    <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px #0001;padding:18px 22px;margin-bottom:18px;">
+                        <b>${d.title}</b> <span style="color:#888;font-size:0.95em;">(Ekleyen: ${d.authorName})</span><br>
+                        <span style="color:#444;">${d.description}</span><br>
+                        <span style="color:${d.approved ? '#1eae60' : '#e53e3e'};font-weight:600;">${d.approved ? 'Onaylı' : 'Onay Bekliyor'}</span><br>
+                        <button onclick="showDetail('${child.key}')" style="background:#1eae60;color:#fff;border:none;padding:7px 18px;border-radius:6px;margin-top:10px;cursor:pointer;">Detay</button>
+                        <button onclick="deleteNews('${child.key}')" style="background:#e53e3e;color:#fff;border:none;padding:7px 18px;border-radius:6px;margin-top:10px;cursor:pointer;">Sil</button>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        });
+    }
+
+    // Yorumlar
+    function loadCommentsTab() {
+        const el = document.getElementById('tabContent');
+        el.innerHTML = '<b>Yükleniyor...</b>';
+        db.ref('news').once('value').then(snapshot => {
+            let html = '<h2>Yorumlar</h2>';
+            let found = false;
+            snapshot.forEach(child => {
+                const d = child.val();
+                if (d.comments) {
+                    Object.values(d.comments).forEach((c, idx) => {
+                        found = true;
+                        html += `
+                            <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px #0001;padding:14px 18px;margin-bottom:12px;">
+                                <b>${c.name}</b> <span style="color:#888;font-size:0.93em;">(${d.title})</span><br>
+                                <span style="color:#444;">${c.text}</span>
+                                <button onclick="deleteComment('${child.key}','${Object.keys(d.comments)[idx]}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 12px;border-radius:6px;margin-left:12px;cursor:pointer;">Sil</button>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            if (!found) html += '<i>Hiç yorum yok.</i>';
+            el.innerHTML = html;
+        });
+    }
+
+    // İstatistikler
+    function loadStatsTab() {
+        const el = document.getElementById('tabContent');
+        el.innerHTML = '<b>Yükleniyor...</b>';
+        db.ref('news').once('value').then(snapshot => {
+            let totalNews = 0, totalComments = 0, totalUpvotes = 0, totalDownvotes = 0, topNews = null, topVotes = -9999;
+            snapshot.forEach(child => {
+                const d = child.val();
+                totalNews++;
+                if (d.comments) totalComments += Object.keys(d.comments).length;
+                if (d.upvotes) totalUpvotes += d.upvotes;
+                if (d.downvotes) totalDownvotes += d.downvotes;
+                const netVotes = (d.upvotes || 0) - (d.downvotes || 0);
+                if (netVotes > topVotes) {
+                    topVotes = netVotes;
+                    topNews = d.title;
+                }
+            });
+            el.innerHTML = `
+                <h2>İstatistikler</h2>
+                <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px #0001;padding:24px 32px;margin-bottom:18px;">
+                    <b>Toplam Haber:</b> ${totalNews}<br>
+                    <b>Toplam Yorum:</b> ${totalComments}<br>
+                    <b>Toplam + Oy:</b> ${totalUpvotes}<br>
+                    <b>Toplam - Oy:</b> ${totalDownvotes}<br>
+                    <b>En Çok Oy Alan Haber:</b> ${topNews ? topNews + ' (' + topVotes + ' net oy)' : '-'}
+                </div>
+            `;
+        });
+    }
+
+    // Ayarlar (örnek)
+    function loadSettingsTab() {
+        const el = document.getElementById('tabContent');
+        el.innerHTML = `
+            <h2>Ayarlar</h2>
+            <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px #0001;padding:24px 32px;margin-bottom:18px;">
+                <label>Admin E-posta: <input type="email" value="admin@site.com" style="padding:7px 12px;border-radius:6px;border:1px solid #ddd;"></label><br><br>
+                <label>Site Başlığı: <input type="text" value="Terrier Mi Değil Mi?" style="padding:7px 12px;border-radius:6px;border:1px solid #ddd;"></label><br><br>
+                <button style="background:#1eae60;color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;">Kaydet</button>
+            </div>
+            <i>Bu alan örnektir, gerçek ayarlar için backend gereklidir.</i>
+        `;
+    }
+
+    // Haber onayla/sil fonksiyonları
     window.approveNews = function(id) {
         db.ref('news/' + id).update({approved: true});
         showToast('Haber onaylandı!');
+        showTab('pending');
     }
-    window.showDetailModal = function(id) {
-        const modal = document.getElementById('detailModal');
-        const body = document.getElementById('detailModalBody');
-        modal.style.display = 'flex';
-        body.innerHTML = 'Yükleniyor...';
-        db.ref('news/' + id).once('value').then(snap => {
-            if (!snap.exists()) { body.innerHTML = '<b>Haber bulunamadı.</b>'; return; }
-            const d = snap.val();
-            body.innerHTML = `
-              <img src="${d.imageUrl}" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-bottom:18px;" alt="Başlık Fotoğrafı">
-              <div style="font-size:1.4em;font-weight:bold;margin-bottom:8px;">${d.title}</div>
-              <div style="color:#444;font-size:1.08em;margin-bottom:12px;">${d.description}</div>
-              <div style="color:#888;font-size:0.98em;margin-bottom:16px;">Ekleyen: ${d.authorName}</div>
-              <div style="margin-bottom:10px;font-weight:600;">Galeri Fotoğrafları:</div>
-              <div id='adminGalleryImgs' style="display:flex;flex-wrap:wrap;gap:10px;">
-                ${(d.galleryImages||[]).map(url => `<img src='${url}' style='width:140px;height:100px;object-fit:cover;border-radius:6px;background:#eee;cursor:pointer;'>`).join('')}
-              </div>
-            `;
-            // Galeri görsellerine tıklama ile büyütme
-            setTimeout(() => {
-              const imgs = document.querySelectorAll('#adminGalleryImgs img');
-              imgs.forEach(img => {
-                img.onclick = function(e) {
-                  e.stopPropagation();
-                  document.getElementById('galleryImgModalImg').src = this.src;
-                  document.getElementById('galleryImgModal').style.display = 'flex';
-                };
-              });
-            }, 100);
+    window.deleteNews = function(id) {
+        if (confirm('Bu haberi silmek istediğinize emin misiniz?')) {
+            db.ref('news/' + id).remove();
+            showToast('Haber silindi!');
+            showTab('pending');
+        }
+    }
+    window.showDetail = function(id) {
+      db.ref('news/' + id).once('value').then(snap => {
+        if (!snap.exists()) return;
+        const d = snap.val();
+        let html = `
+          <img src="${d.imageUrl}" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-bottom:18px;" alt="Başlık Fotoğrafı">
+          <div style="font-size:1.4em;font-weight:bold;margin-bottom:8px;">${d.title}</div>
+          <div style="color:#444;font-size:1.08em;margin-bottom:12px;">${d.description}</div>
+          <div style="color:#888;font-size:0.98em;margin-bottom:16px;">Ekleyen: ${d.authorName}</div>
+          <div style="margin-bottom:10px;font-weight:600;">Galeri Fotoğrafları:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+            ${(d.galleryImages||[]).map(url => `<img src='${url}' style='width:120px;height:80px;object-fit:cover;border-radius:6px;background:#eee;cursor:pointer;'>`).join('')}
+          </div>
+          <div style="margin-bottom:10px;font-weight:600;">Yorumlar:</div>
+          <div id="modalComments">
+            Yükleniyor...
+          </div>
+        `;
+        document.getElementById('detailModalBody').innerHTML = html;
+        document.getElementById('detailModal').style.display = 'flex';
+
+        // Yorumları yükle
+        db.ref('news/' + id + '/comments').once('value').then(snap2 => {
+          if (!snap2.exists()) {
+            document.getElementById('modalComments').innerHTML = '<i>Henüz yorum yok.</i>';
+            return;
+          }
+          let commentsHtml = '';
+          snap2.forEach(child => {
+            const c = child.val();
+            commentsHtml += `<div style="border-bottom:1px solid #eee;padding:8px 0;">
+              <b>${c.name}</b><br>
+              <span style="color:#444;">${c.text}</span>
+            </div>`;
+          });
+          document.getElementById('modalComments').innerHTML = commentsHtml;
         });
+      });
     }
-    window.closeDetailModal = function() {
-        document.getElementById('detailModal').style.display = 'none';
+    window.deleteComment = function(newsId, commentId) {
+        if (confirm('Yorumu silmek istediğinize emin misiniz?')) {
+            db.ref('news/' + newsId + '/comments/' + commentId).remove();
+            showToast('Yorum silindi!');
+            showTab('comments');
+        }
     }
-    // Galeri büyütme modalı kapama
-    document.getElementById('galleryImgModal').onclick = function() {
-      this.style.display = 'none';
-    };
+
+    // Basit toast fonksiyonu
+    function showToast(msg) {
+        let el = document.getElementById('admin2-toast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'admin2-toast';
+            el.style.position = 'fixed';
+            el.style.top = '32px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+            el.style.background = '#1eae60';
+            el.style.color = '#fff';
+            el.style.padding = '14px 32px';
+            el.style.borderRadius = '8px';
+            el.style.fontSize = '1.1em';
+            el.style.fontWeight = '500';
+            el.style.boxShadow = '0 4px 24px rgba(0,0,0,0.13)';
+            el.style.zIndex = '9999';
+            document.body.appendChild(el);
+        }
+        el.textContent = msg;
+        el.style.opacity = '1';
+        setTimeout(() => { el.style.opacity = '0'; }, 2200);
+    }
     </script>
-    <div id="toast-container"></div>
 </body>
 </html> 

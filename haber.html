@@ -257,8 +257,26 @@
         document.getElementById('yorumForm').reset();
     };
 
+    // Device fingerprinting
+    async function getDeviceFingerprint() {
+      const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency,
+        navigator.deviceMemory,
+        navigator.platform
+      ];
+      const fingerprint = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(components.join('|')));
+      return Array.from(new Uint8Array(fingerprint))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
     // IP adresini cache'le
     let cachedIP = null;
+    let cachedFingerprint = null;
     async function getUserIP() {
       if (cachedIP) return cachedIP;
       try {
@@ -274,46 +292,95 @@
 
     // IP tabanlı oy ver / geri çek / geçiş yap (upvotes/downvotes ayrı sayaç)
     async function voteDetail(value) {
-      const ip = await getUserIP();
-      const ipKey = ip.replace(/\./g, '_');
-      const newsRef = db.ref('news/' + newsId);
-      // Optimistic UI: butonları hemen güncelle
-      updateVoteButtonsDetail(value === 1 ? 'up' : 'down');
-      await newsRef.transaction(news => {
-        if (!news) return news;
-        if (!news.votesByIP) news.votesByIP = {};
-        if (typeof news.upvotes !== 'number') news.upvotes = 0;
-        if (typeof news.downvotes !== 'number') news.downvotes = 0;
-        const currentVote = news.votesByIP[ipKey] || null;
-        if (value === 1) {
-          if (currentVote === 'up') {
-            // Oyunu geri çek
-            news.votesByIP[ipKey] = null;
-            news.upvotes -= 1;
-          } else if (currentVote === 'down') {
-            news.votesByIP[ipKey] = 'up';
-            news.upvotes += 1;
-            news.downvotes -= 1;
-          } else {
-            news.votesByIP[ipKey] = 'up';
-            news.upvotes += 1;
-          }
-        } else if (value === -1) {
-          if (currentVote === 'down') {
-            news.votesByIP[ipKey] = null;
-            news.downvotes -= 1;
-          } else if (currentVote === 'up') {
-            news.votesByIP[ipKey] = 'down';
-            news.downvotes += 1;
-            news.upvotes -= 1;
-          } else {
-            news.votesByIP[ipKey] = 'down';
-            news.downvotes += 1;
-          }
+      try {
+        const ip = await getUserIP();
+        if (!cachedFingerprint) {
+          cachedFingerprint = await getDeviceFingerprint();
         }
-        return news;
-      });
-      setTimeout(() => updateVoteButtonsDetail(), 100);
+        const ipKey = ip.replace(/\./g, '_');
+        const newsRef = db.ref('news/' + newsId);
+        
+        // Rate limiting kontrolü
+        const now = Date.now();
+        const lastVoteRef = db.ref('lastVotes/' + ipKey);
+        const lastVoteSnap = await lastVoteRef.once('value');
+        const lastVote = lastVoteSnap.val() || 0;
+        
+        if (now - lastVote < 60000) { // 1 dakika bekleme süresi
+          showToast('Lütfen 1 dakika bekleyin.', 'error');
+          return;
+        }
+
+        // Optimistic UI: butonları hemen güncelle
+        updateVoteButtonsDetail(value === 1 ? 'up' : 'down');
+        
+        await newsRef.transaction(news => {
+          if (!news) return news;
+          if (!news.votesByIP) news.votesByIP = {};
+          if (!news.votesByDevice) news.votesByDevice = {};
+          if (typeof news.upvotes !== 'number') news.upvotes = 0;
+          if (typeof news.downvotes !== 'number') news.downvotes = 0;
+          
+          const currentVote = news.votesByIP[ipKey] || null;
+          const currentDeviceVote = news.votesByDevice[cachedFingerprint] || null;
+          
+          // Aynı cihazdan farklı IP'lerle oy kullanımını engelle
+          if (currentDeviceVote && currentDeviceVote !== currentVote) {
+            showToast('Bu cihazdan farklı bir IP ile oy kullanılamaz.', 'error');
+            return news;
+          }
+
+          if (value === 1) {
+            if (currentVote === 'up') {
+              news.votesByIP[ipKey] = null;
+              news.votesByDevice[cachedFingerprint] = null;
+              news.upvotes -= 1;
+            } else if (currentVote === 'down') {
+              news.votesByIP[ipKey] = 'up';
+              news.votesByDevice[cachedFingerprint] = 'up';
+              news.upvotes += 1;
+              news.downvotes -= 1;
+            } else {
+              news.votesByIP[ipKey] = 'up';
+              news.votesByDevice[cachedFingerprint] = 'up';
+              news.upvotes += 1;
+            }
+          } else if (value === -1) {
+            if (currentVote === 'down') {
+              news.votesByIP[ipKey] = null;
+              news.votesByDevice[cachedFingerprint] = null;
+              news.downvotes -= 1;
+            } else if (currentVote === 'up') {
+              news.votesByIP[ipKey] = 'down';
+              news.votesByDevice[cachedFingerprint] = 'down';
+              news.downvotes += 1;
+              news.upvotes -= 1;
+            } else {
+              news.votesByIP[ipKey] = 'down';
+              news.votesByDevice[cachedFingerprint] = 'down';
+              news.downvotes += 1;
+            }
+          }
+          
+          // Vote metadata
+          if (!news.voteMetadata) news.voteMetadata = {};
+          news.voteMetadata[ipKey] = {
+            timestamp: now,
+            deviceFingerprint: cachedFingerprint,
+            userAgent: navigator.userAgent
+          };
+          
+          return news;
+        });
+
+        // Son oy zamanını güncelle
+        await lastVoteRef.set(now);
+        setTimeout(() => updateVoteButtonsDetail(), 100);
+        
+      } catch (error) {
+        showToast('Oy kullanılırken bir hata oluştu.', 'error');
+        console.error('Vote error:', error);
+      }
     }
 
     // Butonları IP'ye göre güncelle (Reddit mantığı: aynı anda sadece bir oy aktif)
