@@ -126,37 +126,29 @@ async function vote(newsId, value) {
     }
     const ipKey = ip.replace(/\./g, '_');
     const newsRef = db.ref('news/' + newsId);
-    
     // Rate limiting kontrolü
-    const now = Date.now();
-    const lastVoteRef = db.ref('lastVotes/' + ipKey);
-    const lastVoteSnap = await lastVoteRef.once('value');
-    const lastVote = lastVoteSnap.val() || 0;
-    
-    if (now - lastVote < 60000) { // 1 dakika bekleme süresi
-      showToast('Lütfen 1 dakika bekleyin.', 'error');
-      return;
-    }
-
+    // const now = Date.now();
+    // const lastVoteRef = db.ref('lastVotes/' + ipKey);
+    // const lastVoteSnap = await lastVoteRef.once('value');
+    // const lastVote = lastVoteSnap.val() || 0;
+    // if (now - lastVote < 60000) {
+    //   showToast('Lütfen 1 dakika bekleyin.', 'error');
+    //   return;
+    // }
     // Optimistic UI: butonları hemen güncelle
     updateVoteButtons(newsId, value === 1 ? 'up' : 'down');
-    
     await newsRef.transaction(news => {
       if (!news) return news;
       if (!news.votesByIP) news.votesByIP = {};
       if (!news.votesByDevice) news.votesByDevice = {};
       if (typeof news.upvotes !== 'number') news.upvotes = 0;
       if (typeof news.downvotes !== 'number') news.downvotes = 0;
-      
       const currentVote = news.votesByIP[ipKey] || null;
       const currentDeviceVote = news.votesByDevice[cachedFingerprint] || null;
-      
-      // Aynı cihazdan farklı IP'lerle oy kullanımını engelle
       if (currentDeviceVote && currentDeviceVote !== currentVote) {
         showToast('Bu cihazdan farklı bir IP ile oy kullanılamaz.', 'error');
         return news;
       }
-
       if (value === 1) {
         if (currentVote === 'up') {
           news.votesByIP[ipKey] = null;
@@ -188,22 +180,18 @@ async function vote(newsId, value) {
           news.downvotes += 1;
         }
       }
-      
       // Vote metadata
       if (!news.voteMetadata) news.voteMetadata = {};
       news.voteMetadata[ipKey] = {
-        timestamp: now,
+        timestamp: Date.now(),
         deviceFingerprint: cachedFingerprint,
         userAgent: navigator.userAgent
       };
-      
       return news;
     });
-
     // Son oy zamanını güncelle
-    await lastVoteRef.set(now);
+    // await lastVoteRef.set(now);
     setTimeout(() => updateVoteButtons(newsId), 100);
-    
   } catch (error) {
     showToast('Oy kullanılırken bir hata oluştu.', 'error');
     console.error('Vote error:', error);
