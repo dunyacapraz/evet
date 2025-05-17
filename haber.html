@@ -84,11 +84,16 @@
     <div class="haber-detay-container">
         <h3>Yorumlar</h3>
         <div id="yorumlarListesi">Yorumlar yükleniyor...</div>
+        <div id="commentLoginRequired" style="display: none; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
+            <p style="margin-bottom: 16px; color: #4a5568;">Yorum yapabilmek için Facebook ile giriş yapmalısınız.</p>
+            <button id="fb-login-btn-comment" class="fb-login-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="20" height="20">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Facebook ile Giriş Yap
+            </button>
+        </div>
         <form id="yorumForm" style="margin-top:24px;">
-            <div class="form-group">
-                <label for="yorumIsim">İsminiz</label>
-                <input type="text" id="yorumIsim" required style="width:100%;padding:8px;margin-bottom:8px;">
-            </div>
             <div class="form-group">
                 <label for="yorumMetin">Yorumunuz</label>
                 <textarea id="yorumMetin" required style="width:100%;padding:8px;"></textarea>
@@ -101,6 +106,7 @@
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://connect.facebook.net/en_US/sdk.js"></script>
     <script>
     // Firebase config'iniz
     const firebaseConfig = {
@@ -221,6 +227,122 @@
     }
     loadNewsDetail();
 
+    // Facebook SDK yüklendikten sonra çalışacak
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId: '570302372780158',
+            cookie: true,
+            xfbml: true,
+            version: 'v18.0'
+        });
+
+        // Login durumunu kontrol et
+        FB.getLoginStatus(function(response) {
+            if (response.status === 'connected') {
+                handleFacebookLogin(response);
+            } else {
+                showLoginButton();
+            }
+        });
+    };
+
+    let currentUser = null;
+
+    // Facebook login butonunu göster
+    function showLoginButton() {
+        const loginBtn = document.getElementById('fb-login-btn-comment');
+        const commentForm = document.getElementById('yorumForm');
+        const loginRequired = document.getElementById('commentLoginRequired');
+        if (loginBtn) loginBtn.style.display = 'flex';
+        if (commentForm) commentForm.style.display = 'none';
+        if (loginRequired) loginRequired.style.display = 'block';
+        currentUser = null;
+    }
+
+    // Facebook login işlemi
+    function handleFacebookLogin(response) {
+        FB.api('/me', { fields: 'name,email,picture' }, function(userData) {
+            currentUser = {
+                id: response.authResponse.userID,
+                name: userData.name,
+                email: userData.email,
+                picture: userData.picture?.data?.url
+            };
+            
+            // Login durumunu göster
+            const commentForm = document.getElementById('yorumForm');
+            const loginRequired = document.getElementById('commentLoginRequired');
+            if (commentForm) commentForm.style.display = 'block';
+            if (loginRequired) loginRequired.style.display = 'none';
+        });
+    }
+
+    // Facebook login butonuna tıklama
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginBtn = document.getElementById('fb-login-btn-comment');
+        if (loginBtn) {
+            loginBtn.onclick = function() {
+                // Yeni pencerede Facebook login sayfasını aç
+                const width = 600;
+                const height = 400;
+                const left = (window.innerWidth - width) / 2;
+                const top = (window.innerHeight - height) / 2;
+                
+                const popup = window.open(
+                    'https://www.facebook.com/dialog/oauth?' +
+                    'client_id=570302372780158' +
+                    '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
+                    '&scope=public_profile,email' +
+                    '&response_type=token',
+                    'facebook-login',
+                    `width=${width},height=${height},left=${left},top=${top}`
+                );
+
+                // Popup penceresinden gelen yanıtı dinle
+                window.addEventListener('message', function(event) {
+                    if (event.origin === window.location.origin) {
+                        const accessToken = event.data.accessToken;
+                        if (accessToken) {
+                            // Access token ile kullanıcı bilgilerini al
+                            FB.api('/me', { 
+                                fields: 'name,email,picture',
+                                access_token: accessToken 
+                            }, function(userData) {
+                                currentUser = {
+                                    id: userData.id,
+                                    name: userData.name,
+                                    email: userData.email,
+                                    picture: userData.picture?.data?.url
+                                };
+                                handleFacebookLogin({ authResponse: { userID: userData.id } });
+                                popup.close();
+                            });
+                        }
+                    }
+                });
+            };
+        }
+    });
+
+    // Yorum ekleme
+    document.getElementById('yorumForm').onsubmit = async function(e) {
+        e.preventDefault();
+        if (!currentUser) {
+            showToast('Yorum yapabilmek için Facebook ile giriş yapmalısınız.', 'error');
+            return;
+        }
+        const text = document.getElementById('yorumMetin').value.trim();
+        if (!text) return;
+        await db.ref('news/' + newsId + '/comments').push({
+            name: currentUser.name,
+            userId: currentUser.id,
+            userPicture: currentUser.picture,
+            text,
+            timestamp: Date.now()
+        });
+        document.getElementById('yorumForm').reset();
+    };
+
     // Yorumları yükle
     function loadComments() {
         const yorumlarDiv = document.getElementById('yorumlarListesi');
@@ -234,28 +356,17 @@
                 yorumlar.push(child.val());
             });
             yorumlarDiv.innerHTML = yorumlar.map(y => `
-                <div style="border-bottom:1px solid #eee;padding:8px 0;">
-                    <b>${y.name}</b><br>
-                    <span style="color:#444;">${y.text}</span>
+                <div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;gap:12px;align-items:start;">
+                    <img src="${y.userPicture}" alt="${y.name}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                    <div>
+                        <div style="font-weight:600;margin-bottom:4px;">${y.name}</div>
+                        <div style="color:#444;">${y.text}</div>
+                    </div>
                 </div>
             `).join('');
         });
     }
     loadComments();
-
-    // Yorum ekleme
-    document.getElementById('yorumForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const name = document.getElementById('yorumIsim').value.trim();
-        const text = document.getElementById('yorumMetin').value.trim();
-        if (!name || !text) return;
-        await db.ref('news/' + newsId + '/comments').push({
-            name,
-            text,
-            timestamp: Date.now()
-        });
-        document.getElementById('yorumForm').reset();
-    };
 
     // Device fingerprinting
     async function getDeviceFingerprint() {

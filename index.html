@@ -6,10 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+    <!-- Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/tr_TR/sdk.js#xfbml=1&version=v18.0&appId=570302372780158" nonce="random_nonce"></script>
 </head>
 <body>
     <div class="modern-header">
         <span class="modern-header-title">TERRIER Mİ DEĞİL Mİ?</span>
+        <div id="fb-login-container" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%);">
+            <div id="fb-login-status"></div>
+            <button id="fb-login-btn" class="fb-login-btn" onclick="fbLoginCustom()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="20" height="20">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Facebook ile Giriş Yap
+            </button>
+        </div>
     </div>
     <div style="text-align:center;margin-top:-18px;margin-bottom:24px;font-size:1.05em;color:#4a5568;opacity:0.85;">
       Detay için fotoğraflara tıklayın.
@@ -187,5 +198,57 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="main.js"></script>
+    <div id="fb-root"></div>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '570302372780158',
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v18.0'
+        });
+        FB.AppEvents.logPageView();
+        // Otomatik login kontrolü
+        FB.getLoginStatus(function(response) {
+          statusChangeCallback(response);
+        });
+      };
+
+      (function(d, s, id){
+         var js, fjs = d.getElementsByTagName(s)[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement(s); js.id = id;
+         js.src = "https://connect.facebook.net/tr_TR/sdk.js";
+         fjs.parentNode.insertBefore(js, fjs);
+       }(document, 'script', 'facebook-jssdk'));
+
+      function statusChangeCallback(response) {
+        if (response.status === 'connected') {
+          FB.api('/me', {fields: 'name,email,picture'}, function(userData) {
+            document.getElementById('fb-login-status').innerHTML =
+              `<img src="${userData.picture.data.url}" alt="${userData.name}" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;">` +
+              `<span class="user-name">${userData.name}</span>` +
+              `<button class="logout-btn" onclick="fbLogout()">Çıkış</button>`;
+            document.getElementById('fb-login-btn').style.display = 'none';
+          });
+        } else {
+          document.getElementById('fb-login-status').innerHTML = '';
+          document.getElementById('fb-login-btn').style.display = 'flex';
+        }
+      }
+
+      function fbLoginCustom() {
+        FB.login(function(response) {
+          statusChangeCallback(response);
+        }, {scope: 'public_profile,email'});
+      }
+
+      function fbLogout() {
+        FB.logout(function(response) {
+          document.getElementById('fb-login-status').innerHTML = '';
+          document.getElementById('fb-login-btn').style.display = 'flex';
+        });
+      }
+    </script>
 </body>
 </html>
