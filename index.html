@@ -245,6 +245,16 @@
       document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('logout-btn').style.display = 'none';
         document.getElementById('fb-profile-info').style.display = 'none';
+        // Çıkış butonunu her zaman bağla
+        document.getElementById('logout-btn').onclick = function() {
+          if (typeof FB !== 'undefined' && FB.logout) {
+            FB.logout(function(response) {
+              window.location.reload();
+            });
+          } else {
+            window.location.reload();
+          }
+        };
       });
       window.fbAsyncInit = function() {
         FB.init({
@@ -313,16 +323,14 @@
       function fbLoginCustom() {
         FB.login(function(response) {
           if (response.authResponse) {
-            window.location.reload(); // Girişten sonra sayfayı yenile
+            FB.getLoginStatus(function(statusResponse) {
+              if (statusResponse.status === 'connected') {
+                window.location.reload();
+              }
+            });
           }
         }, {scope: 'public_profile,email'});
       }
-
-      document.getElementById('logout-btn').onclick = function() {
-        FB.logout(function(response) {
-          window.location.reload(); // Çıkıştan sonra sayfayı yenile
-        });
-      };
     </script>
 </body>
 </html>
