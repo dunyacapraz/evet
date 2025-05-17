@@ -266,6 +266,7 @@
        }(document, 'script', 'facebook-jssdk'));
 
       function statusChangeCallback(response) {
+        console.log('FB status:', response.status);
         const rightPanel = document.getElementById('right-panel');
         const logoutBtn = document.getElementById('logout-btn');
         const loginBtn = document.getElementById('fb-login-btn');
