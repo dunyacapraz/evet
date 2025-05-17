@@ -23,7 +23,8 @@
                 Facebook ile Giriş Yap
             </button>
         </div>
-        <button class="add-news-btn" onclick="openModal()">Şüpheli Ekle</button>
+        <button class="add-news-btn" id="add-news-btn" onclick="openModal()" disabled>Şüpheli Ekle</button>
+        <button class="logout-btn" id="logout-btn" style="display:none;">Çıkış Yap</button>
     </div>
     <div style="text-align:center;margin-top:-18px;margin-bottom:24px;font-size:1.05em;color:#4a5568;opacity:0.85;">
       Detay için fotoğraflara tıklayın.
@@ -47,6 +48,27 @@
             color: #1a2236;
             text-shadow: 0 4px 24px rgba(30,174,96,0.10), 0 1.5px 0 #fff;
             transition: color 0.3s;
+        }
+        .add-news-btn:disabled {
+            background: #cfd8dc !important;
+            color: #888 !important;
+            cursor: not-allowed !important;
+            border: none;
+            box-shadow: none;
+        }
+        .logout-btn {
+            margin-top: 10px;
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .logout-btn:hover {
+            background: #c0392b;
         }
     </style>
     <div class="modal" id="newsModal">
@@ -210,7 +232,6 @@
           version    : 'v18.0'
         });
         FB.AppEvents.logPageView();
-        // Otomatik login kontrolü
         FB.getLoginStatus(function(response) {
           statusChangeCallback(response);
         });
@@ -225,32 +246,38 @@
        }(document, 'script', 'facebook-jssdk'));
 
       function statusChangeCallback(response) {
+        const addBtn = document.getElementById('add-news-btn');
+        const logoutBtn = document.getElementById('logout-btn');
         if (response.status === 'connected') {
           FB.api('/me', {fields: 'name,email,picture'}, function(userData) {
             document.getElementById('fb-login-status').innerHTML =
               `<img src="${userData.picture.data.url}" alt="${userData.name}" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;">` +
-              `<span class="user-name">${userData.name}</span>` +
-              `<button class="logout-btn" onclick="fbLogout()">Çıkış</button>`;
+              `<span class="user-name">${userData.name}</span>`;
             document.getElementById('fb-login-btn').style.display = 'none';
+            addBtn.disabled = false;
+            logoutBtn.style.display = 'block';
           });
         } else {
           document.getElementById('fb-login-status').innerHTML = '';
           document.getElementById('fb-login-btn').style.display = 'flex';
+          addBtn.disabled = true;
+          logoutBtn.style.display = 'none';
         }
       }
 
       function fbLoginCustom() {
         FB.login(function(response) {
-          statusChangeCallback(response);
+          if (response.authResponse) {
+            window.location.reload(); // Girişten sonra sayfayı yenile
+          }
         }, {scope: 'public_profile,email'});
       }
 
-      function fbLogout() {
+      document.getElementById('logout-btn').onclick = function() {
         FB.logout(function(response) {
-          document.getElementById('fb-login-status').innerHTML = '';
-          document.getElementById('fb-login-btn').style.display = 'flex';
+          window.location.reload(); // Çıkıştan sonra sayfayı yenile
         });
-      }
+      };
     </script>
 </body>
 </html>
