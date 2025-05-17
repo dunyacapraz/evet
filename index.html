@@ -15,6 +15,7 @@
     </div>
     <div style="display: flex; justify-content: flex-end; margin: 0 40px 24px 0;">
         <div id="right-panel">
+            <div id="fb-profile-info" style="display:none;align-items:center;gap:10px;margin-bottom:10px;"></div>
             <button id="fb-login-btn" class="fb-login-btn panel-btn" onclick="fbLoginCustom()">Facebook ile Giriş Yap</button>
             <div id="fb-login-status"></div>
             <button class="logout-btn panel-btn" id="logout-btn" style="display:none;">Çıkış Yap</button>
@@ -243,6 +244,7 @@
     <script>
       document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('logout-btn').style.display = 'none';
+        document.getElementById('fb-profile-info').style.display = 'none';
       });
       window.fbAsyncInit = function() {
         FB.init({
@@ -271,9 +273,12 @@
         const logoutBtn = document.getElementById('logout-btn');
         const loginBtn = document.getElementById('fb-login-btn');
         const loginStatus = document.getElementById('fb-login-status');
+        const profileInfo = document.getElementById('fb-profile-info');
         let addBtn = document.getElementById('add-news-btn');
         if (addBtn) addBtn.remove();
         logoutBtn.style.display = 'none';
+        profileInfo.style.display = 'none';
+        profileInfo.innerHTML = '';
         if (response.status === 'connected') {
           FB.api('/me', {fields: 'name,email,picture'}, function(userData) {
             loginStatus.innerHTML =
@@ -281,6 +286,8 @@
               `<span class="user-name">${userData.name}</span>`;
             loginBtn.style.display = 'none';
             logoutBtn.style.display = 'block';
+            profileInfo.innerHTML = `<img src="${userData.picture.data.url}" alt="${userData.name}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;"> <span style="font-weight:600;font-size:1.05em;vertical-align:middle;">${userData.name}</span>`;
+            profileInfo.style.display = 'flex';
             if (!document.getElementById('add-news-btn')) {
               const btn = document.createElement('button');
               btn.className = 'add-news-btn panel-btn';
@@ -297,6 +304,9 @@
           logoutBtn.style.display = 'none';
           addBtn = document.getElementById('add-news-btn');
           if (addBtn) addBtn.remove();
+          logoutBtn.style.display = 'none';
+          profileInfo.style.display = 'none';
+          profileInfo.innerHTML = '';
         }
       }
 
