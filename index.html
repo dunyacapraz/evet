@@ -6,42 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
-    <!-- Facebook SDK -->
-    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/tr_TR/sdk.js#xfbml=1&version=v18.0&appId=570302372780158" nonce="random_nonce"></script>
 </head>
 <body>
     <div class="modern-header">
         <span class="modern-header-title">TERRIER Mİ DEĞİL Mİ?</span>
     </div>
-    <div style="display: flex; justify-content: flex-end; margin: 0 40px 24px 0;">
-        <div id="right-panel">
-            <div id="fb-profile-info" style="display:none;align-items:center;gap:10px;margin-bottom:10px;"></div>
-            <button id="fb-login-btn" class="fb-login-btn panel-btn" onclick="fbLoginCustom()">Facebook ile Giriş Yap</button>
-            <div id="fb-login-status"></div>
-            <button class="logout-btn panel-btn" id="logout-btn" style="display:none;">Çıkış Yap</button>
-        </div>
-    </div>
     <div style="text-align:center;margin-top:-18px;margin-bottom:24px;font-size:1.05em;color:#4a5568;opacity:0.85;">
       Detay için fotoğraflara tıklayın.
     </div>
     <style>
-        #right-panel {
-            width: 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 12px;
-            margin-left: auto;
-            margin-right: 40px;
-            margin-bottom: 24px;
-        }
-        #right-panel .panel-btn {
-            width: 100% !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-            display: block !important;
-        }
         .modern-header {
             width: 100vw;
             background: transparent;
@@ -61,34 +34,8 @@
             text-shadow: 0 4px 24px rgba(30,174,96,0.10), 0 1.5px 0 #fff;
             transition: color 0.3s;
         }
-        .add-news-btn {
-            width: auto !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-            display: inline-block !important;
-        }
-        .add-news-btn:disabled {
-            background: #cfd8dc !important;
-            color: #888 !important;
-            cursor: not-allowed !important;
-            border: none;
-            box-shadow: none;
-        }
-        .logout-btn {
-            margin-top: 0;
-            background: #e53e3e;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .logout-btn:hover {
-            background: #c0392b;
-        }
     </style>
+    <button class="add-news-btn" onclick="openModal()">Şüpheli Ekle</button>
     <div class="modal" id="newsModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -240,97 +187,5 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="main.js"></script>
-    <div id="fb-root"></div>
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('logout-btn').style.display = 'none';
-        document.getElementById('fb-profile-info').style.display = 'none';
-        // Çıkış butonunu her zaman bağla
-        document.getElementById('logout-btn').onclick = function() {
-          if (typeof FB !== 'undefined' && FB.logout) {
-            FB.logout(function(response) {
-              window.location.reload();
-            });
-          } else {
-            window.location.reload();
-          }
-        };
-      });
-      window.fbAsyncInit = function() {
-        FB.init({
-          appId      : '570302372780158',
-          cookie     : true,
-          xfbml      : true,
-          version    : 'v18.0'
-        });
-        FB.AppEvents.logPageView();
-        FB.getLoginStatus(function(response) {
-          statusChangeCallback(response);
-        });
-      };
-
-      (function(d, s, id){
-         var js, fjs = d.getElementsByTagName(s)[0];
-         if (d.getElementById(id)) {return;}
-         js = d.createElement(s); js.id = id;
-         js.src = "https://connect.facebook.net/tr_TR/sdk.js";
-         fjs.parentNode.insertBefore(js, fjs);
-       }(document, 'script', 'facebook-jssdk'));
-
-      function statusChangeCallback(response) {
-        console.log('FB status:', response.status);
-        const rightPanel = document.getElementById('right-panel');
-        const logoutBtn = document.getElementById('logout-btn');
-        const loginBtn = document.getElementById('fb-login-btn');
-        const loginStatus = document.getElementById('fb-login-status');
-        const profileInfo = document.getElementById('fb-profile-info');
-        let addBtn = document.getElementById('add-news-btn');
-        if (addBtn) addBtn.remove();
-        logoutBtn.style.display = 'none';
-        profileInfo.style.display = 'none';
-        profileInfo.innerHTML = '';
-        if (response.status === 'connected') {
-          FB.api('/me', {fields: 'name,email,picture'}, function(userData) {
-            loginStatus.innerHTML =
-              `<img src="${userData.picture.data.url}" alt="${userData.name}" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;">` +
-              `<span class="user-name">${userData.name}</span>`;
-            loginBtn.style.display = 'none';
-            logoutBtn.style.display = 'block';
-            profileInfo.innerHTML = `<img src="${userData.picture.data.url}" alt="${userData.name}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;"> <span style="font-weight:600;font-size:1.05em;vertical-align:middle;">${userData.name}</span>`;
-            profileInfo.style.display = 'flex';
-            if (!document.getElementById('add-news-btn')) {
-              const btn = document.createElement('button');
-              btn.className = 'add-news-btn panel-btn';
-              btn.id = 'add-news-btn';
-              btn.textContent = 'Şüpheli Ekle';
-              btn.onclick = openModal;
-              btn.style.marginTop = '12px';
-              rightPanel.insertBefore(btn, logoutBtn);
-            }
-          });
-        } else {
-          loginStatus.innerHTML = '';
-          loginBtn.style.display = 'block';
-          logoutBtn.style.display = 'none';
-          addBtn = document.getElementById('add-news-btn');
-          if (addBtn) addBtn.remove();
-          logoutBtn.style.display = 'none';
-          profileInfo.style.display = 'none';
-          profileInfo.innerHTML = '';
-        }
-      }
-
-      function fbLoginCustom() {
-        FB.login(function(response) {
-          if (response.authResponse) {
-            FB.getLoginStatus(function(statusResponse) {
-              if (statusResponse.status === 'connected') {
-                window.location.reload();
-              }
-            });
-          }
-        }, {scope: 'public_profile,email'});
-      }
-    </script>
 </body>
 </html>

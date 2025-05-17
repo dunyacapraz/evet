@@ -15,123 +15,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let newsListener = null;
-let currentUser = null;
-
-// Facebook SDK yüklendikten sonra çalışacak
-window.fbAsyncInit = function() {
-    FB.init({
-        appId: '570302372780158',
-        cookie: true,
-        xfbml: true,
-        version: 'v18.0'
-    });
-
-    // Login durumunu kontrol et
-    FB.getLoginStatus(function(response) {
-        if (response.status === 'connected') {
-            handleFacebookLogin(response);
-        } else {
-            showLoginButton();
-        }
-    });
-};
-
-// Facebook login butonunu göster
-function showLoginButton() {
-    const loginBtn = document.getElementById('fb-login-btn');
-    const loginStatus = document.getElementById('fb-login-status');
-    if (loginBtn) loginBtn.style.display = 'flex';
-    if (loginStatus) loginStatus.innerHTML = '';
-    currentUser = null;
-}
-
-// Facebook login işlemi
-function handleFacebookLogin(response) {
-    FB.api('/me', { fields: 'name,email,picture' }, function(userData) {
-        currentUser = {
-            id: response.authResponse.userID,
-            name: userData.name,
-            email: userData.email,
-            picture: userData.picture?.data?.url
-        };
-        
-        // Login durumunu göster
-        const loginBtn = document.getElementById('fb-login-btn');
-        const loginStatus = document.getElementById('fb-login-status');
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (loginStatus) {
-            loginStatus.innerHTML = `
-                <img src="${currentUser.picture}" alt="${currentUser.name}">
-                <span class="user-name">${currentUser.name}</span>
-                <button class="logout-btn" onclick="handleFacebookLogout()">Çıkış</button>
-            `;
-        }
-    });
-}
-
-// Facebook login butonuna tıklama
-document.addEventListener('DOMContentLoaded', function() {
-    const loginBtn = document.getElementById('fb-login-btn');
-    if (loginBtn) {
-        loginBtn.onclick = function() {
-            // Yeni pencerede Facebook login sayfasını aç
-            const width = 600;
-            const height = 400;
-            const left = (window.innerWidth - width) / 2;
-            const top = (window.innerHeight - height) / 2;
-            
-            const popup = window.open(
-                'https://www.facebook.com/dialog/oauth?' +
-                'client_id=570302372780158' +
-                '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
-                '&scope=public_profile,email' +
-                '&response_type=token',
-                'facebook-login',
-                `width=${width},height=${height},left=${left},top=${top}`
-            );
-
-            // Popup penceresinden gelen yanıtı dinle
-            window.addEventListener('message', function(event) {
-                if (event.origin === window.location.origin) {
-                    const accessToken = event.data.accessToken;
-                    if (accessToken) {
-                        // Access token ile kullanıcı bilgilerini al
-                        FB.api('/me', { 
-                            fields: 'name,email,picture',
-                            access_token: accessToken 
-                        }, function(userData) {
-                            currentUser = {
-                                id: userData.id,
-                                name: userData.name,
-                                email: userData.email,
-                                picture: userData.picture?.data?.url
-                            };
-                            handleFacebookLogin({ authResponse: { userID: userData.id } });
-                            popup.close();
-                        });
-                    }
-                }
-            });
-        };
-    }
-});
-
-// Facebook çıkış işlemi
-function handleFacebookLogout() {
-    FB.logout(function(response) {
-        showLoginButton();
-        showToast('Başarıyla çıkış yapıldı.');
-    });
-}
-
-// Kullanıcı giriş yapmış mı kontrol et
-function checkAuth() {
-    if (!currentUser) {
-        showToast('Bu işlem için Facebook ile giriş yapmalısınız.', 'error');
-        return false;
-    }
-    return true;
-}
 
 async function renderNews(newsArr) {
     const container = document.querySelector('.container');
@@ -355,17 +238,13 @@ async function uploadToCloudinary(file, uploadPreset = 'unsigned_preset') {
 
 
 async function submitNews(event) {
-    if (!checkAuth()) {
-        event.preventDefault();
-        return;
-    }
-    
     console.log('submitNews çalıştı');
     event.preventDefault();
     const submitBtn = document.querySelector('#newsForm .submit-btn');
     const oldBtnHtml = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner"></span>Ekleniyor...';
+    const authorName = document.getElementById('authorName').value;
     const title = document.getElementById('newsTitle').value;
     const desc = document.getElementById('newsDesc').value;
     const mainImageFile = document.getElementById('newsMainImage').files[0];
@@ -396,9 +275,7 @@ async function submitNews(event) {
         // 3. Haberi veritabanına kaydet (Firebase)
         const newsRef = db.ref('news').push();
         await newsRef.set({
-            authorName: currentUser.name,
-            authorId: currentUser.id,
-            authorPicture: currentUser.picture,
+            authorName: authorName,
             title: title,
             description: desc,
             imageUrl: mainImageUrl,
