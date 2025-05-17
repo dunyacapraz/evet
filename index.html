@@ -241,6 +241,9 @@
     <script src="main.js"></script>
     <div id="fb-root"></div>
     <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('logout-btn').style.display = 'none';
+      });
       window.fbAsyncInit = function() {
         FB.init({
           appId      : '570302372780158',
